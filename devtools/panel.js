@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('tab-network').addEventListener('click', (e) => { openTab('Network'); e.target.classList.add('active'); });
     document.getElementById('tab-inspector').addEventListener('click', (e) => { openTab('Inspector'); e.target.classList.add('active'); });
     document.getElementById('tab-explorer').addEventListener('click', (e) => { openTab('Explorer'); e.target.classList.add('active'); loadExplorerData(); });
+    document.getElementById('tab-encoder').addEventListener('click', (e) => { openTab('EncoderDecoder'); e.target.classList.add('active'); });
 
     // Initial Tab
     document.getElementById('tab-crawling').click();
@@ -70,6 +71,12 @@ function setupEventListeners() {
     document.getElementById('btn-explorer-search').addEventListener('click', loadExplorerData);
     document.getElementById('btn-explorer-delete').addEventListener('click', deleteSelectedScans);
 
+    // Security
+    document.getElementById('btn-force-reload').addEventListener('click', () => {
+        chrome.devtools.inspectedWindow.reload({ ignoreCache: true });
+    });
+    document.getElementById('btn-refresh-security').addEventListener('click', analyzeCookies);
+
     // Modals
     document.querySelectorAll('.close').forEach(el => {
         el.addEventListener('click', () => {
@@ -81,6 +88,8 @@ function setupEventListeners() {
             event.target.style.display = "none";
         }
     };
+
+    setupEncoderLogic();
 }
 
 // --- Target Logic ---
@@ -439,6 +448,116 @@ async function deleteSelectedScans() {
 
 function showModal(id) {
     document.getElementById(id).style.display = 'block';
+}
+
+// --- Encoder/Decoder Logic ---
+function setupEncoderLogic() {
+    const input = document.getElementById('encoder-input');
+    const output = document.getElementById('encoder-output');
+
+    function setOutput(text) {
+        output.value = text;
+    }
+
+    function getInput() {
+        return input.value;
+    }
+
+    // Base64
+    document.getElementById('btn-base64-encode').addEventListener('click', () => {
+        try {
+            // UTF-8 safe Base64 encoding
+            const text = getInput();
+            const encoded = btoa(unescape(encodeURIComponent(text)));
+            setOutput(encoded);
+        } catch (e) { setOutput("Error: " + e.message); }
+    });
+
+    document.getElementById('btn-base64-decode').addEventListener('click', () => {
+        try {
+            const text = getInput();
+            const decoded = decodeURIComponent(escape(atob(text)));
+            setOutput(decoded);
+        } catch (e) { setOutput("Error: " + e.message); }
+    });
+
+    // URL
+    document.getElementById('btn-url-encode').addEventListener('click', () => {
+        setOutput(encodeURIComponent(getInput()));
+    });
+
+    document.getElementById('btn-url-decode').addEventListener('click', () => {
+        try {
+            setOutput(decodeURIComponent(getInput()));
+        } catch (e) { setOutput("Error: " + e.message); }
+    });
+
+    // Hex
+    document.getElementById('btn-hex-encode').addEventListener('click', () => {
+        const text = getInput();
+        let hex = '';
+        for (let i = 0; i < text.length; i++) {
+            hex += text.charCodeAt(i).toString(16).padStart(2, '0');
+        }
+        setOutput(hex);
+    });
+
+    document.getElementById('btn-hex-decode').addEventListener('click', () => {
+        const text = getInput().replace(/\s/g, '');
+        let str = '';
+        try {
+            for (let i = 0; i < text.length; i += 2) {
+                str += String.fromCharCode(parseInt(text.substr(i, 2), 16));
+            }
+            setOutput(str);
+        } catch (e) { setOutput("Error: " + e.message); }
+    });
+
+    // HTML Entities
+    document.getElementById('btn-html-encode').addEventListener('click', () => {
+        const text = getInput();
+        const div = document.createElement('div');
+        div.innerText = text;
+        setOutput(div.innerHTML);
+    });
+
+    document.getElementById('btn-html-decode').addEventListener('click', () => {
+        const text = getInput();
+        const div = document.createElement('div');
+        div.innerHTML = text;
+        setOutput(div.innerText);
+    });
+
+    // Swap
+    document.getElementById('btn-swap-input-output').addEventListener('click', () => {
+        const temp = input.value;
+        input.value = output.value;
+        output.value = temp;
+    });
+
+    // Mojibake Fixers
+    // Helper to interpret string bytes as Latin1 and re-decode
+    function fixMojibake(decoderName) {
+        try {
+            const text = getInput();
+            // 1. Convert string to bytes treating it as Latin1 (ISO-8859-1)
+            // This recovers the original bytes if they were misinterpreted as Latin1
+            const bytes = new Uint8Array(text.length);
+            for (let i = 0; i < text.length; i++) {
+                bytes[i] = text.charCodeAt(i) & 0xFF;
+            }
+
+            // 2. Decode these bytes using the target encoding
+            const decoder = new TextDecoder(decoderName);
+            const result = decoder.decode(bytes);
+            setOutput(result);
+        } catch (e) {
+            setOutput("Error: " + e.message);
+        }
+    }
+
+    document.getElementById('btn-fix-utf8-latin1').addEventListener('click', () => fixMojibake('utf-8'));
+    document.getElementById('btn-fix-euckr-latin1').addEventListener('click', () => fixMojibake('euc-kr'));
 }
 
 // --- Network & Security Logic (Restored) ---

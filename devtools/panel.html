@@ -219,6 +219,7 @@
         <button id="tab-network" class="tablinks">네트워크</button>
         <button id="tab-inspector" class="tablinks">검사기</button>
         <button id="tab-explorer" class="tablinks">데이터 탐색기</button>
+        <button id="tab-encoder" class="tablinks">인코더/디코더</button>
     </div>
 
     <div id="Crawling" class="tabcontent" style="display:block">
@@ -263,6 +264,50 @@
         </div>
         <div id="explorer-results">
             <p>대상을 선택하고 검색하세요.</p>
+        </div>
+    </div>
+
+    <div id="EncoderDecoder" class="tabcontent">
+        <h3>인코딩 / 디코딩 & 텍스트 복구</h3>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <div style="flex: 1;">
+                <label for="encoder-input"><b>입력:</b></label>
+                <textarea id="encoder-input" rows="8"
+                    style="width: 100%; box-sizing: border-box; font-family: monospace;"
+                    placeholder="변환할 텍스트를 입력하세요..."></textarea>
+            </div>
+            <div style="flex: 1;">
+                <label for="encoder-output"><b>출력:</b></label>
+                <textarea id="encoder-output" rows="8"
+                    style="width: 100%; box-sizing: border-box; font-family: monospace;"
+                    placeholder="결과가 여기에 표시됩니다."></textarea>
+            </div>
+        </div>
+
+        <div class="controls" style="flex-wrap: wrap;">
+            <button id="btn-base64-encode">Base64 Enc</button>
+            <button id="btn-base64-decode">Base64 Dec</button>
+            <button id="btn-url-encode">URL Enc</button>
+            <button id="btn-url-decode">URL Dec</button>
+            <button id="btn-hex-encode">Hex Enc</button>
+            <button id="btn-hex-decode">Hex Dec</button>
+            <button id="btn-html-encode">HTML Enc</button>
+            <button id="btn-html-decode">HTML Dec</button>
+        </div>
+
+        <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
+
+        <h4>한글 깨짐 복구 (Mojibake Fixer)</h4>
+        <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">
+            잘못된 인코딩으로 깨져 보이는 텍스트를 복구합니다. (입력란의 텍스트를 변환하여 출력란에 표시)
+        </p>
+        <div class="controls">
+            <button id="btn-fix-utf8-latin1" title="UTF-8 바이트가 Latin1으로 해석된 경우 (예: Ã©Ã...)">UTF-8 (Latin1 해석)
+                복구</button>
+            <button id="btn-fix-euckr-latin1" title="EUC-KR 바이트가 Latin1으로 해석된 경우 (예: ¼ö...)">EUC-KR (Latin1 해석)
+                복구</button>
+            <button id="btn-swap-input-output" class="secondary">🔄 입력/출력 교체</button>
         </div>
     </div>
 
