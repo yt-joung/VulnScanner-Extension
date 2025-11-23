@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>VulnScanner Panel</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 10px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h3 {
+            color: #34495e;
+            margin-top: 20px;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button.secondary {
+            background-color: #95a5a6;
+        }
+
+        button.secondary:hover {
+            background-color: #7f8c8d;
+        }
+
+        button.danger {
+            background-color: #e74c3c;
+        }
+
+        button.danger:hover {
+            background-color: #c0392b;
+        }
+
+        button.success {
+            background-color: #27ae60;
+        }
+
+        button.success:hover {
+            background-color: #219150;
+        }
+
+        .tab {
+            overflow: hidden;
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 15px;
+        }
+
+        .tab button {
+            background-color: transparent;
+            color: #555;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 10px 20px;
+            transition: 0.3s;
+            border-bottom: 3px solid transparent;
+            border-radius: 0;
+        }
+
+        .tab button:hover {
+            background-color: #f1f1f1;
+        }
+
+        .tab button.active {
+            border-bottom: 3px solid #3498db;
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .tabcontent {
+            display: none;
+            padding: 15px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        th,
+        td {
+            border: 1px solid #eee;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            color: #555;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fcfcfc;
+        }
+
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+        }
+
+        #network-log div {
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+        }
+
+        .controls {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 50%;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        input[type="text"],
+        select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>
+        VulnScanner 대시보드
+        <div style="font-size: 14px; font-weight: normal;">
+            <select id="target-select" style="min-width: 150px;">
+                <option value="">대상 선택 (저장용)</option>
+            </select>
+            <button id="btn-add-target" class="secondary" title="새 대상 추가">+</button>
+            <button id="btn-manage-targets" class="secondary" title="대상 관리">⚙️</button>
+        </div>
+    </h2>
+
+    <div class="controls">
+        <button id="btn-export">리포트 내보내기</button>
+        <button id="btn-clear" class="secondary">화면 지우기</button>
+        <button id="btn-settings" class="secondary" style="margin-left: auto;">설정 (필터)</button>
+    </div>
+
+    <div class="tab">
+        <button id="tab-crawling" class="tablinks active">크롤링 & DOM</button>
+        <button id="tab-security" class="tablinks">보안 헤더</button>
+        <button id="tab-network" class="tablinks">네트워크</button>
+        <button id="tab-inspector" class="tablinks">검사기</button>
+        <button id="tab-explorer" class="tablinks">데이터 탐색기</button>
+    </div>
+
+    <div id="Crawling" class="tabcontent" style="display:block">
+        <div style="margin-bottom: 10px; display: flex; gap: 10px;">
+            <button id="btn-refresh-dom">현재 페이지 스캔</button>
+            <button id="btn-save-scan" class="success">현재 결과 저장</button>
+            <span id="save-status" style="margin-left: 10px; color: green; align-self: center;"></span>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <div style="flex: 1; border: 1px solid #eee; padding: 5px;">
+                <h4>현재 페이지 결과</h4>
+                <div id="dom-results"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="Security" class="tabcontent">
+        <h3>보안 분석</h3>
+        <button id="btn-force-reload">페이지 새로고침 및 분석</button>
+        <button id="btn-refresh-security">쿠키 정보만 새로고침</button>
+        <div id="security-headers"></div>
+    </div>
+
+    <div id="Network" class="tabcontent">
+        <h3>네트워크 로그</h3>
+        <div id="network-log" style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; padding: 5px;"></div>
+    </div>
+
+    <div id="Inspector" class="tabcontent">
+        <h3>요소 검사기</h3>
+        <button id="btn-start-inspect">검사 시작</button>
+        <div id="inspector-details" style="margin-top: 10px;"></div>
+    </div>
+
+    <div id="Explorer" class="tabcontent">
+        <h3>데이터 탐색기</h3>
+        <div class="controls">
+            <input type="text" id="explorer-search" placeholder="검색어 입력 (URL, 내용)..." style="width: 300px;">
+            <button id="btn-explorer-search">검색</button>
+            <button id="btn-explorer-delete" class="danger">선택 삭제</button>
+        </div>
+        <div id="explorer-results">
+            <p>대상을 선택하고 검색하세요.</p>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-add-target" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>새 대상 추가</h3>
+            <input type="text" id="input-target-name" placeholder="대상 이름 (예: Project Alpha)"
+                style="width: 100%; margin-bottom: 10px;">
+            <input type="text" id="input-target-desc" placeholder="설명 (선택)" style="width: 100%; margin-bottom: 10px;">
+            <button id="btn-confirm-add-target" class="success">추가</button>
+        </div>
+    </div>
+
+    <div id="modal-settings" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>설정</h3>
+
+            <div style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                <h4>일반 설정</h4>
+                <label for="input-max-links">최대 링크 수집 개수:</label>
+                <input type="number" id="input-max-links" value="1000" style="width: 80px;">
+                <button id="btn-save-general-settings" class="success"
+                    style="padding: 4px 8px; font-size: 12px;">저장</button>
+            </div>
+
+            <h4>주석 필터 (Regex)</h4>
+            <p style="font-size: 0.9em; color: #666;">이 정규식과 일치하는 주석은 수집/저장되지 않습니다.</p>
+            <ul id="settings-filters-list" style="list-style: none; padding: 0;"></ul>
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="input-new-filter" placeholder="새 필터 정규식 (예: ^\s*$)" style="flex: 1;">
+                <button id="btn-add-filter">추가</button>
+            </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button id="btn-reset-filters" class="danger">초기화</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-manage-targets" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>대상 관리</h3>
+            <ul id="target-list" style="list-style: none; padding: 0;"></ul>
+            <p style="font-size: 0.9em; color: #666;">대상을 삭제하면 관련 스캔 데이터도 모두 삭제됩니다.</p>
+        </div>
+    </div>
+
+    <script type="module" src="panel.js"></script>
+</body>
+
+</html>
