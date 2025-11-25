@@ -17,7 +17,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('tab-network').addEventListener('click', (e) => { openTab('Network'); e.target.classList.add('active'); });
     document.getElementById('tab-inspector').addEventListener('click', (e) => { openTab('Inspector'); e.target.classList.add('active'); });
     document.getElementById('tab-explorer').addEventListener('click', (e) => { openTab('Explorer'); e.target.classList.add('active'); loadExplorerData(); });
+    document.getElementById('tab-explorer').addEventListener('click', (e) => { openTab('Explorer'); e.target.classList.add('active'); loadExplorerData(); });
     document.getElementById('tab-encoder').addEventListener('click', (e) => { openTab('EncoderDecoder'); e.target.classList.add('active'); });
+    document.getElementById('tab-repeater').addEventListener('click', (e) => { openTab('Repeater'); e.target.classList.add('active'); });
 
     // Initial Tab
     document.getElementById('tab-crawling').click();
@@ -90,6 +92,7 @@ function setupEventListeners() {
     };
 
     setupEncoderLogic();
+    setupRepeaterLogic();
 }
 
 // --- Target Logic ---
@@ -707,3 +710,179 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         document.getElementById('inspector-details').innerHTML = html;
     }
 });
+
+// --- Repeater Logic ---
+function setupRepeaterLogic() {
+    document.getElementById('btn-repeater-send').addEventListener('click', sendRepeaterRequest);
+    document.getElementById('btn-repeater-beautify').addEventListener('click', beautifyRequest);
+    document.getElementById('btn-repeater-load-file').addEventListener('click', () => document.getElementById('file-repeater-load').click());
+    document.getElementById('file-repeater-load').addEventListener('change', loadRepeaterFile);
+
+    // New UI Controls
+    document.getElementById('chk-repeater-wrap').addEventListener('change', toggleRepeaterWrap);
+    document.getElementById('btn-layout-split').addEventListener('click', () => setRepeaterLayout('split'));
+    document.getElementById('btn-layout-request').addEventListener('click', () => setRepeaterLayout('request'));
+    document.getElementById('btn-layout-response').addEventListener('click', () => setRepeaterLayout('response'));
+    document.getElementById('btn-repeater-render').addEventListener('click', renderRepeaterInBrowser);
+}
+
+function toggleRepeaterWrap(e) {
+    const wrap = e.target.checked ? 'pre-wrap' : 'pre';
+    document.getElementById('repeater-request').style.whiteSpace = wrap;
+    document.getElementById('repeater-response').style.whiteSpace = wrap;
+}
+
+function setRepeaterLayout(mode) {
+    const reqContainer = document.getElementById('repeater-request-container');
+    const resContainer = document.getElementById('repeater-response-container');
+
+    if (mode === 'split') {
+        reqContainer.style.display = 'flex';
+        resContainer.style.display = 'flex';
+    } else if (mode === 'request') {
+        reqContainer.style.display = 'flex';
+        resContainer.style.display = 'none';
+    } else if (mode === 'response') {
+        reqContainer.style.display = 'none';
+        resContainer.style.display = 'flex';
+    }
+}
+
+function renderRepeaterInBrowser() {
+    const responseText = document.getElementById('repeater-response').innerText;
+    if (!responseText) return alert("렌더링할 응답이 없습니다.");
+
+    // Extract body from response (skip headers)
+    const parts = responseText.split('\n\n');
+    if (parts.length < 2) return alert("응답 본문을 찾을 수 없습니다.");
+
+    const body = parts.slice(1).join('\n\n'); // Rejoin in case body has double newlines
+
+    // Create a Blob and open in new tab
+    const blob = new Blob([body], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+}
+
+async function sendRepeaterRequest() {
+    const rawRequest = document.getElementById('repeater-request').value.trim();
+    if (!rawRequest) return alert("요청 내용을 입력하세요.");
+
+    const parsed = parseRawRequest(rawRequest);
+    if (!parsed) return alert("요청 형식이 올바르지 않습니다. (첫 줄에 METHOD URL VERSION 필요)");
+
+    document.getElementById('repeater-response').innerText = "전송 중...";
+
+    chrome.runtime.sendMessage({
+        action: "repeater_request",
+        data: parsed
+    }, (response) => {
+        if (chrome.runtime.lastError) {
+            document.getElementById('repeater-response').innerText = "에러: " + chrome.runtime.lastError.message;
+            return;
+        }
+        renderRepeaterResponse(response);
+    });
+}
+
+function parseRawRequest(raw) {
+    const lines = raw.split('\n');
+    if (lines.length === 0) return null;
+
+    // 1. Request Line
+    const requestLine = lines[0].trim().split(/\s+/);
+    if (requestLine.length < 2) return null;
+
+    const method = requestLine[0].toUpperCase();
+    let url = requestLine[1];
+
+    // 2. Headers & Body
+    const headers = {};
+    let body = "";
+    let isBody = false;
+
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!isBody) {
+            if (line.trim() === "") {
+                isBody = true;
+                continue;
+            }
+            const parts = line.split(':');
+            if (parts.length >= 2) {
+                const key = parts[0].trim();
+                const value = parts.slice(1).join(':').trim();
+                headers[key] = value;
+            }
+        } else {
+            body += line + "\n";
+        }
+    }
+
+    if (body.endsWith("\n")) body = body.slice(0, -1);
+
+    // 3. URL Construction
+    if (url.startsWith('/')) {
+        let host = headers['Host'] || headers['host'];
+        if (host) {
+            let protocol = 'http://';
+            if (host.endsWith(':443')) {
+                protocol = 'https://';
+            }
+            url = protocol + host + url;
+        }
+    }
+
+    // 4. Clean Unsafe Headers
+    const unsafeHeaders = ['host', 'content-length', 'connection', 'keep-alive', 'te', 'upgrade', 'cookie', 'user-agent'];
+    const cleanHeaders = {};
+    for (const [key, value] of Object.entries(headers)) {
+        if (!unsafeHeaders.includes(key.toLowerCase())) {
+            cleanHeaders[key] = value;
+        }
+    }
+
+    return { method, url, headers: cleanHeaders, body };
+}
+
+function beautifyRequest() {
+    const raw = document.getElementById('repeater-request').value;
+    const parsed = parseRawRequest(raw);
+    if (!parsed) return alert("요청을 파싱할 수 없습니다.");
+
+    let beautified = `${parsed.method} ${parsed.url} HTTP/1.1\n`;
+    for (const [key, value] of Object.entries(parsed.headers)) {
+        // Simple capitalization for common headers could be added here
+        beautified += `${key}: ${value}\n`;
+    }
+    beautified += `\n${parsed.body}`;
+
+    document.getElementById('repeater-request').value = beautified;
+}
+
+function loadRepeaterFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        document.getElementById('repeater-request').value = e.target.result;
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // Reset for re-selection
+}
+
+function renderRepeaterResponse(response) {
+    if (response.error) {
+        document.getElementById('repeater-response').innerText = "오류 발생:\n" + response.error;
+        return;
+    }
+
+    let output = `HTTP/1.1 ${response.status} ${response.statusText}\n`;
+    for (const [key, value] of Object.entries(response.headers)) {
+        output += `${key}: ${value}\n`;
+    }
+    output += `\n${response.body}`;
+
+    document.getElementById('repeater-response').innerText = output;
+}

@@ -19,6 +19,44 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             sendResponse({ status: "error", message: err.message });
         });
         return true; // Async response
+    } else if (request.action === "repeater_request") {
+        const { method, url, headers, body } = request.data;
+
+        // Fetch options
+        const options = {
+            method: method,
+            headers: headers
+        };
+
+        // Body is not allowed for GET/HEAD
+        if (method !== 'GET' && method !== 'HEAD' && body) {
+            options.body = body;
+        }
+
+        try {
+            fetch(url, options)
+                .then(async (response) => {
+                    const resHeaders = {};
+                    for (const [key, value] of response.headers.entries()) {
+                        resHeaders[key] = value;
+                    }
+                    const text = await response.text();
+
+                    sendResponse({
+                        status: response.status,
+                        statusText: response.statusText,
+                        headers: resHeaders,
+                        body: text
+                    });
+                })
+                .catch(error => {
+                    sendResponse({ error: error.message });
+                });
+        } catch (e) {
+            sendResponse({ error: "Synchronous Error: " + e.message });
+        }
+
+        return true; // Async response
     }
 });
 

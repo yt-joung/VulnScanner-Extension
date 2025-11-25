@@ -220,6 +220,7 @@
         <button id="tab-inspector" class="tablinks">검사기</button>
         <button id="tab-explorer" class="tablinks">데이터 탐색기</button>
         <button id="tab-encoder" class="tablinks">인코더/디코더</button>
+        <button id="tab-repeater" class="tablinks">리피터</button>
     </div>
 
     <div id="Crawling" class="tabcontent" style="display:block">
@@ -308,6 +309,41 @@
             <button id="btn-fix-euckr-latin1" title="EUC-KR 바이트가 Latin1으로 해석된 경우 (예: ¼ö...)">EUC-KR (Latin1 해석)
                 복구</button>
             <button id="btn-swap-input-output" class="secondary">🔄 입력/출력 교체</button>
+        </div>
+    </div>
+
+    <div id="Repeater" class="tabcontent">
+        <h3>리피터 (HTTP 요청 전송)</h3>
+        <div class="controls" style="flex-wrap: wrap;">
+            <button id="btn-repeater-send" class="success">전송 (Send)</button>
+            <button id="btn-repeater-beautify">정렬 (Beautify)</button>
+            <button id="btn-repeater-load-file" class="secondary">파일 불러오기</button>
+            <input type="file" id="file-repeater-load" style="display: none;">
+
+            <span style="margin-left: 10px; border-left: 1px solid #ccc; padding-left: 10px;">
+                <input type="checkbox" id="chk-repeater-wrap" checked> <label for="chk-repeater-wrap">자동 줄바꿈</label>
+            </span>
+
+            <span style="margin-left: auto; display: flex; gap: 5px;">
+                <button id="btn-layout-split" class="secondary" title="분할 보기">Split</button>
+                <button id="btn-layout-request" class="secondary" title="요청만 보기">Req</button>
+                <button id="btn-layout-response" class="secondary" title="응답만 보기">Res</button>
+                <button id="btn-repeater-render" title="브라우저에서 보기">🌏 Render</button>
+            </span>
+        </div>
+        <div id="repeater-container" style="display: flex; gap: 10px; height: 500px;">
+            <div id="repeater-request-container" style="flex: 1; display: flex; flex-direction: column;">
+                <label for="repeater-request"><b>요청 (Raw Request):</b></label>
+                <textarea id="repeater-request"
+                    style="flex: 1; font-family: monospace; white-space: pre-wrap; overflow: auto; padding: 10px; border: 1px solid #ccc;"
+                    placeholder="GET / HTTP/1.1&#10;Host: example.com&#10;&#10;"></textarea>
+            </div>
+            <div id="repeater-response-container" style="flex: 1; display: flex; flex-direction: column;">
+                <label for="repeater-response"><b>응답 (Response):</b></label>
+                <div id="repeater-response"
+                    style="flex: 1; font-family: monospace; white-space: pre-wrap; overflow: auto; padding: 10px; border: 1px solid #ccc; background: #f8f9fa;">
+                </div>
+            </div>
         </div>
     </div>
 
